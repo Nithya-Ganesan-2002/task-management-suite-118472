@@ -10,6 +10,7 @@
 		getAuthJWT
 	} from '$lib/api/boards';
 	import { auth } from '$lib/authStore';
+	import { realtimeStore } from '$lib/realtimeStore';
 
 	type Task = {
 		id: number;
@@ -48,11 +49,38 @@
 	let authLoaded = false;
 
 	onMount(() => {
+		let savedUser: string | null = null;
+
 		const unsub = auth.subscribe(($auth) => {
 			authLoaded = !$auth.loading;
+			if ($auth.user?.id !== savedUser) {
+				savedUser = $auth.user?.id || null;
+				if (savedUser) {
+					realtimeStore.subscribeRealtime(savedUser);
+				} else {
+					realtimeStore.unsubscribe();
+				}
+			}
 		});
+
 		initBoards();
-		return () => unsub();
+
+		const unsubRealtime = realtimeStore.subscribe(({ boardEvent, taskEvent }) => {
+			if (boardEvent) {
+				initBoards();
+				realtimeStore.clearEvents();
+			}
+			if (taskEvent) {
+				reloadSelectedBoard();
+				realtimeStore.clearEvents();
+			}
+		});
+
+		return () => {
+			unsub();
+			unsubRealtime();
+			realtimeStore.unsubscribe();
+		};
 	});
 
 	// PUBLIC_INTERFACE

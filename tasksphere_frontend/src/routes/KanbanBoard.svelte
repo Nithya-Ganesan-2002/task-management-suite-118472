@@ -1,5 +1,7 @@
 <script lang="ts">
 	import dndzone from 'svelte-dnd-list';
+	import { onMount } from 'svelte';
+	import { realtimeStore } from '$lib/realtimeStore';
 	import {
 		createTask,
 		updateTask,
@@ -162,6 +164,25 @@
 			return url;
 		}
 	}
+
+	// Subscribe to Supabase realtime task updates affecting this board
+	onMount(() => {
+		const unsub = realtimeStore.subscribe(({ taskEvent }) => {
+			if (
+				taskEvent &&
+				board &&
+				(
+					(taskEvent.task && taskEvent.task.board_id === board.id) ||
+					!('board_id' in (taskEvent.task || {}))
+				)
+			) {
+				reloadBoard();
+				realtimeStore.clearEvents();
+			}
+			return undefined;
+		});
+		return () => unsub();
+	});
 </script>
 
 <div class="kanban-root">

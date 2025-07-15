@@ -2,6 +2,12 @@
 
 Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
 
+## Real-Time updates with Supabase
+
+TaskSphere frontend supports live real-time updates for boards and tasks using Supabase Realtime. Changes made in any client or the backend are instantly reflected in your UI via websockets. This is powered by the store at `src/lib/realtimeStore.ts` and automatic integration in the UI components (`BoardList`, `KanbanBoard`).
+
+Environment must have `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` set for realtime to work.
+
 ## Creating a project
 
 If you're seeing this, you've probably already done this step. Congrats!
