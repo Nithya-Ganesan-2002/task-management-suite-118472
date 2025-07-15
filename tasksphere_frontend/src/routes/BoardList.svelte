@@ -6,7 +6,8 @@
 		createBoard,
 		updateBoard,
 		deleteBoard,
-		reorderBoards
+		reorderBoards,
+		getAuthJWT
 	} from '$lib/api/boards';
 	import { auth } from '$lib/authStore';
 
@@ -64,8 +65,9 @@
 			if (boards.length && selectedBoardId === null) {
 				selectedBoardId = boards[0].id;
 			}
-		} catch (e) {
-			error = e.message || 'Failed to load boards';
+		} catch (e: unknown) {
+			const msg = typeof e === "object" && e && "message" in e ? (e as { message?: string }).message : null;
+			error = msg || 'Failed to load boards';
 		} finally {
 			loading = false;
 		}
@@ -81,8 +83,9 @@
 			newBoardTitle = '';
 			newBoardDesc = '';
 			creating = false;
-		} catch (e) {
-			error = e.message || 'Board creation failed';
+		} catch (e: unknown) {
+			const msg = typeof e === "object" && e && "message" in e ? (e as { message?: string }).message : null;
+			error = msg || 'Board creation failed';
 		}
 	}
 
@@ -101,8 +104,9 @@
 			if (brd) brd.title = renameTitle;
 			renamingId = null;
 			renameTitle = '';
-		} catch (e) {
-			error = e.message || 'Board rename failed';
+		} catch (e: unknown) {
+			const msg = typeof e === "object" && e && "message" in e ? (e as { message?: string }).message : null;
+			error = msg || 'Board rename failed';
 		}
 	}
 
@@ -115,8 +119,9 @@
 			if (selectedBoardId === id) {
 				selectedBoardId = boards[0]?.id ?? null;
 			}
-		} catch (e) {
-			error = e.message || 'Deletion failed';
+		} catch (e: unknown) {
+			const msg = typeof e === "object" && e && "message" in e ? (e as { message?: string }).message : null;
+			error = msg || 'Deletion failed';
 		}
 	}
 
@@ -126,7 +131,7 @@
 	}
 
 	// PUBLIC_INTERFACE
-	async function handleDnd({ detail }) {
+	async function handleDnd({ detail }: { detail: { items: Board[] } }) {
 		const { items } = detail;
 		boards = items;
 		await reorderBoards(boards.map((b) => b.id));
@@ -134,6 +139,27 @@
 
 	$: selectedBoard = boards.find((b) => b.id === selectedBoardId);
 
+	// For KanbanBoard child: refetch board from API, update boards array with fresh board data
+	async function reloadSelectedBoard() {
+		loading = true;
+		error = null;
+		try {
+			if (selectedBoardId !== null) {
+				const jwt = await getAuthJWT();
+				const API_BASE = import.meta.env.VITE_BACKEND_API || '/api';
+				const res = await fetch(`${API_BASE}/boards/${selectedBoardId}`, { headers: { Authorization: `Bearer ${jwt}` } });
+				if (!res.ok) throw new Error('Failed to reload board');
+				const fresh = await res.json();
+				const idx = boards.findIndex(b => b.id === selectedBoardId);
+				if (idx >= 0) boards[idx] = fresh;
+			}
+		} catch (e: unknown) {
+			const msg = typeof e === "object" && e && "message" in e ? (e as { message?: string }).message : null;
+			error = msg || 'Failed to refresh board data';
+		} finally {
+			loading = false;
+		}
+	}
 </script>
 
 <div class="board-list-container">
@@ -156,10 +182,10 @@
 			class="kanban-boards"
 			on:consider={handleDnd}
 		>
-			{#each boards as board (board.id)}
-				<li class:selected={board.id === selectedBoardId} data-id={board.id}>
-					{#if renamingId === board.id}
-						<form on:submit|preventDefault={() => handleRenameBoard(board.id)} class="rename-form">
+			{#each boards as boardItem (boardItem.id)}
+				<li class:selected={boardItem.id === selectedBoardId} data-id={boardItem.id}>
+					{#if renamingId === boardItem.id}
+						<form on:submit|preventDefault={() => handleRenameBoard(boardItem.id)} class="rename-form">
 							<input bind:value={renameTitle} required />
 							<button type="submit">Save</button>
 							<button type="button" on:click={() => (renamingId = null)}>Cancel</button>
@@ -169,15 +195,15 @@
 							<button
 								class="board-select-btn"
 								type="button"
-								on:click={() => selectBoard(board.id)}
-								aria-current={board.id === selectedBoardId ? "page" : undefined}
+								on:click={() => selectBoard(boardItem.id)}
+								aria-current={boardItem.id === selectedBoardId ? "page" : undefined}
 							>
-								<span class="board-title">{board.title}</span>
+								<span class="board-title">{boardItem.title}</span>
 							</button>
 							<button
 								class="board-action"
 								type="button"
-								on:click|stopPropagation={() => startRename(board.id, board.title)}
+								on:click|stopPropagation={() => startRename(boardItem.id, boardItem.title)}
 								aria-label="Rename board"
 							>
 								Rename
@@ -185,7 +211,7 @@
 							<button
 								class="board-action"
 								type="button"
-								on:click|stopPropagation={() => handleDeleteBoard(board.id)}
+								on:click|stopPropagation={() => handleDeleteBoard(boardItem.id)}
 								aria-label="Delete board"
 							>
 								Delete
@@ -203,6 +229,12 @@
 					<small>{selectedBoard.description}</small>
 				{/if}
 			</div>
+			<!-- Kanban Board per selectedBoard -->
+			{#await import('./KanbanBoard.svelte') then KanbanBoard}
+				<KanbanBoard board={selectedBoard} reloadBoard={reloadSelectedBoard} />
+			{:catch}
+				<div class="kanban-error">Could not load Kanban UI</div>
+			{/await}
 		{/if}
 	{/if}
 
@@ -225,6 +257,7 @@
 </div>
 
 <style>
+/* styles unchanged for brevity; see previous version */
 .board-list-container {
 	max-width: 32rem;
 	margin: auto;
