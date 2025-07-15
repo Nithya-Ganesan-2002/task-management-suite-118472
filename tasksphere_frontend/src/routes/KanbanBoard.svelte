@@ -153,6 +153,15 @@
 		const files = (e.target as HTMLInputElement).files;
 		newTaskFile = (files && files.length) ? files[0] : null;
 	}
+
+	function decodeFileName(url: string): string {
+		try {
+			const parts = url.split(/[\\/]/);
+			return decodeURIComponent(parts[parts.length - 1]);
+		} catch {
+			return url;
+		}
+	}
 </script>
 
 <div class="kanban-root">
@@ -186,6 +195,20 @@
 							{#if task.description}
 								<div class="desc">{task.description}</div>
 							{/if}
+							{#if task.attachments && task.attachments.length}
+								<div class="attachments">
+									<strong>Attachments:</strong>
+									<ul>
+										{#each task.attachments as att (att.id)}
+											<li>
+												<a href={att.file_url} target="_blank" rel="noopener noreferrer">
+													{decodeFileName(att.file_url)}
+												</a>
+											</li>
+										{/each}
+									</ul>
+								</div>
+							{/if}
 						</li>
 					{/each}
 				</ul>
@@ -217,6 +240,18 @@
 			<label>
 				Attachment
 				<input type="file" accept="*" on:change={handleFileInput} />
+				{#if editingTask && editingTask.attachments && editingTask.attachments.length}
+					<div class="attached-files">
+						<strong>Existing files:</strong>
+						<ul>
+							{#each editingTask.attachments as file (file.id)}
+								<li>
+									<a href={file.file_url} target="_blank" rel="noopener noreferrer">{decodeFileName(file.file_url)}</a>
+								</li>
+							{/each}
+						</ul>
+					</div>
+				{/if}
 			</label>
 			{#if error}
 				<div class="kanban-error">{error}</div>
@@ -346,5 +381,26 @@
 .kanban-error {
 	color: #b02315;
 	font-weight: 600;
+}
+
+/* Attachment styles */
+.attachments, .attached-files {
+	margin-top: 0.3em;
+	font-size: 0.97em;
+	color: #4A607B;
+}
+.attachments ul, .attached-files ul {
+	margin: 0.1em 0 0 1.2em;
+	padding: 0;
+	list-style: disc inside;
+}
+.attachments a, .attached-files a {
+	color: var(--color-theme-2);
+	text-decoration: underline dotted;
+	word-break: break-all;
+	font-size: 0.98em;
+}
+.attachments a:hover, .attached-files a:hover {
+	color: var(--color-theme-1);
 }
 </style>
