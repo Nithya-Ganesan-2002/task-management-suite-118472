@@ -1,5 +1,4 @@
 <script lang="ts">
-	export const prerender = false;
 	import { auth } from '$lib/authStore';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
