@@ -14,12 +14,16 @@
 		"test:unit": "vitest",
 		"test": "npm run test:unit -- --run"
 	},
+	"dependencies": {
+		"@supabase/supabase-js": "^2.51.0",
+		"@sveltejs/kit": "^2.16.0",
+		"dotenv": "^16.4.5"
+	},
 	"devDependencies": {
-		"@fontsource/fira-mono": "^5.0.0",
 		"@eslint/compat": "^1.2.5",
 		"@eslint/js": "^9.18.0",
+		"@fontsource/fira-mono": "^5.0.0",
 		"@sveltejs/adapter-auto": "^4.0.0",
-		"@sveltejs/kit": "^2.16.0",
 		"@sveltejs/vite-plugin-svelte": "^5.0.0",
 		"@testing-library/jest-dom": "^6.6.3",
 		"@testing-library/svelte": "^5.2.4",
